@@ -1,5 +1,5 @@
-import { PrismaClient } from "../generated/prisma/index.js";
-
+import { PrismaClient } from "@prisma/client";
+// ✅ correct relative path for ESM
 const prisma = new PrismaClient();
 
 export const createUserController = async (req, res) => {
@@ -14,13 +14,15 @@ export const createUserController = async (req, res) => {
       data: { name, email },
     });
 
-    return res.status(200).json({
-      sucess: true,
-      message: "user created successfully",
-    });
     console.log(user);
+
+    return res.status(200).json({
+      success: true,
+      message: "user created successfully",
+      data: user,
+    });
   } catch (error) {
-    console.error("an error occured", error);
-    throw error;
+    console.error("An error occurred:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };

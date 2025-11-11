@@ -4,19 +4,19 @@
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
-generator client {
-  provider = "prisma-client-js"
-  output   = "../generated/prisma"
-}
-
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-//----------------------------- ENUM-------------------
+generator client {
+  provider = "prisma-client-js"
+}
 
-enum Role{
+
+//----------------------------- ENUMS -------------------
+
+enum Role {
   PATIENT
   DOCTOR
   ADMIN
@@ -28,7 +28,7 @@ enum UserGender {
   PREFER_NOT_TO_SAY
 }
 
-enum AppointmentStatus{
+enum AppointmentStatus {
   SCHEDULED
   COMPLETED
   CANCELED
@@ -43,74 +43,103 @@ enum DoctorsVerificationStatus {
   SUSPENDED
 }
 
-
-//------------------CREATE CORE USER----------------
+//------------------ CORE USER ----------------
 
 model Users {
-  id          String       @id @default(cuid())
-  firstName   String
-  lastName    String
-  email       String    @unique
-  dateOfBirth DateTime
-  gender      UserGender?
-  password    String
-  role        Role      @default(PATIENT)
-  avatarUrl   String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id             String          @id @default(cuid())
+  firstName      String
+  lastName       String
+  email          String          @unique
+  dateOfBirth    DateTime
+  gender         UserGender?
+  password       String
+  role           Role            @default(PATIENT)
+  avatarUrl      String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
-  //Relations
-  patientProfile  patient?
-  doctorProfile   Doctor?
-  adminProfile    Admin?
-  kyc             Kyc?
-  appointments    Appointment[]
-  payments        Payments[]
-  userConsent     userConsent?
+  // Relations
+  patientProfile Patient?
+  doctorProfile  Doctor?
+  adminProfile   Admin?
+  kyc            Kyc?
+  appointments   Appointment[]
+  payments       Payments[]
+  userConsent    UserConsent?
 }
 
-
-//--------------PROFILES---------------------------
+//-------------- PROFILES ---------------------------
 
 model Patient {
-  id        Int   @id @default(autoincrement())
-  user      user  @relatiion(fields: [userId], references: [id])
-  userId    Int   @unique
+  id        Int    @id @default(autoincrement())
+  userId    String @unique
+  user      Users  @relation(fields: [userId], references: [id])
   age       Int?
   gender    String?
   bloodType String?
-
 }
 
 model UserConsent {
-  id             String      @id default(cuid())
-  userId         String      @unique
-  user           Users       @relation(fields: [userId], reference: [id], onDelete: Cascade)
-  tandC          Boolean     @default(false)
-  privacy        Boolean     @default(false)
-  marketingOptin Boolean     @default(false)
-  telemedConsent Boolean     @default(false)
-
-  acceptedAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tandC          Boolean  @default(false)
+  privacy        Boolean  @default(false)
+  marketingOptin Boolean  @default(false)
+  telemedConsent Boolean  @default(false)
+  acceptedAt     DateTime @default(now())
 
   @@map("user_consents")
 }
 
 model Doctor {
-  id                Int       @id @default(cuid())
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              Users    @relation(fields: [userId], references: [id])
   firstName         String
   lastName          String
   title             String
-  email             String    @unique
+  email             String   @unique
   phone             String
   password          String
   specialization    String
-  licenceNumber     String    @unique
+  licenceNumber     String   @unique
   yearsOfExp        Int?
-  hospital          string?
+  hospital          String?
   avatarUrl         String?
+  verificationStatus DoctorsVerificationStatus @default(PENDING)
 }
 
-model DoctorProfile {
-  id   
+//---------------- OTHER MODELS ----------------
+
+model Admin {
+  id        String  @id @default(cuid())
+  userId    String  @unique
+  user      Users   @relation(fields: [userId], references: [id])
+  position  String?
+}
+
+model Kyc {
+  id        String  @id @default(cuid())
+  userId    String  @unique
+  user      Users   @relation(fields: [userId], references: [id])
+  documentType String?
+  documentUrl  String?
+  verified     Boolean @default(false)
+}
+
+model Appointment {
+  id         String            @id @default(cuid())
+  userId     String
+  user       Users             @relation(fields: [userId], references: [id])
+  date       DateTime
+  status     AppointmentStatus @default(SCHEDULED)
+}
+
+model Payments {
+  id         String    @id @default(cuid())
+  userId     String
+  user       Users     @relation(fields: [userId], references: [id])
+  amount     Float
+  createdAt  DateTime  @default(now())
 }
