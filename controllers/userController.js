@@ -1,28 +1,99 @@
 import { PrismaClient } from "@prisma/client";
-// ✅ correct relative path for ESM
+import bcrypt from "bcrypt";
 const prisma = new PrismaClient();
 
-export const createUserController = async (req, res) => {
+// CREATE USER
+export const createUser = async (req, res) => {
   try {
-    const { email, name } = req.body;
+    const { firstName, lastName, email, password, dateOfBirth, gender, role } =
+      req.body;
 
-    if (!email || !name) {
-      return res.status(400).json({ message: "email and name are required" });
-    }
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await prisma.user.create({
-      data: { name, email },
+    const user = await prisma.users.create({
+      data: {
+        firstName,
+        lastName,
+        email,
+        password: hashedPassword,
+        dateOfBirth: new Date(dateOfBirth),
+        gender,
+        role,
+      },
     });
 
-    console.log(user);
-
-    return res.status(200).json({
-      success: true,
-      message: "user created successfully",
-      data: user,
-    });
+    res.status(201).json({ message: "User created successfully", user });
   } catch (error) {
-    console.error("An error occurred:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// READ ALL USERS
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await prisma.users.findMany({
+      include: {
+        patientProfile: true,
+        doctorProfile: true,
+        adminProfile: true,
+        kyc: true,
+        userConsent: true,
+      },
+    });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// READ SINGLE USER BY ID
+export const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await prisma.users.findUnique({
+      where: { id },
+      include: {
+        patientProfile: true,
+        doctorProfile: true,
+        adminProfile: true,
+        appointments: true,
+        payments: true,
+        kyc: true,
+        userConsent: true,
+      },
+    });
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// UPDATE USER
+export const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { firstName, lastName, gender, avatarUrl } = req.body;
+
+    const updatedUser = await prisma.users.update({
+      where: { id },
+      data: { firstName, lastName, gender, avatarUrl },
+    });
+
+    res.json({ message: "User updated successfully", updatedUser });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// DELETE USER
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.users.delete({ where: { id } });
+    res.json({ message: "User deleted successfully" });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 };

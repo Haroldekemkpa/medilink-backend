@@ -4,6 +4,7 @@ const app = express();
 app.use(express.json());
 const PORT = 3000;
 
+
 app.use("/api/user", router);
 
 app.listen(PORT, () => {
