@@ -8,7 +8,7 @@ app.use(express.json());
 const PORT = 3000;
 
 // mount endpoints
-app.use("/api/")
+app.use("/api/", userRouter);
 
 app.use("/api/user", router);
 
